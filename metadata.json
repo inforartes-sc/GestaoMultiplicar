@@ -1,0 +1,6 @@
+{
+  "name": "Sistema de Gerenciamento de Multiplicadores e Eleitores",
+  "description": "Plataforma completa para gestão estratégica de contatos, cadastro de eleitores, multiplicadores políticos, auditoria LGPD e acompanhamento em tempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
