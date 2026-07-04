@@ -40,7 +40,7 @@ export const EleitoresList: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MASTER';
   const eleitoresAutorizados = getFilteredEleitores();
 
   // Lista única de cidades para filtro com contagem

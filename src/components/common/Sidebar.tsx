@@ -20,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
 
   if (!currentUser) return null;
 
-  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MASTER';
   const eleitoresFiltrados = getFilteredEleitores();
 
   const navItems = [

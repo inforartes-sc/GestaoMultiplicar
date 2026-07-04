@@ -77,67 +77,7 @@ export const Navbar: React.FC = () => {
             <span>LGPD Compliant</span>
           </button>
 
-          {/* Seletor Demonstrativo de Acesso */}
-          {currentUser.role === 'SUPER_ADMIN' && (
-            <div className="relative" ref={switcherRef}>
-              <button
-                onClick={() => setShowProfileSwitcher(!showProfileSwitcher)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 transition-all shadow-xs cursor-pointer"
-                title="Trocar rapidamente entre Super Admin e Multiplicadores"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden md:inline">Visão:</span>
-                <span className="font-bold text-indigo-600">
-                  Super Admin
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
 
-              {showProfileSwitcher && (
-                <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-1.5 border-b border-slate-100">
-                    <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Alternar Perfil de Teste
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                      Alterne o cargo em tempo real para verificar as permissões e o isolamento de dados.
-                    </p>
-                  </div>
-                  <div className="max-h-60 overflow-y-auto py-1">
-                    {users.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          switchProfile(u);
-                          setShowProfileSwitcher(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors cursor-pointer ${
-                          currentUser.id === u.id ? 'bg-indigo-50 border-l-2 border-indigo-600 font-semibold text-indigo-900' : 'text-slate-700'
-                        }`}
-                      >
-                        <div className="truncate pr-2">
-                          <div className="font-medium flex items-center gap-1.5">
-                            {u.role === 'SUPER_ADMIN' ? (
-                              <Award className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                            ) : (
-                              <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            )}
-                            <span className="truncate">{u.nome}</span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 pl-5">
-                            {u.cidade} • {u.situacao}
-                          </div>
-                        </div>
-                        {currentUser.id === u.id && (
-                          <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-sm font-bold">Ativo</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Sino de Notificações */}
           <button
@@ -158,7 +98,7 @@ export const Navbar: React.FC = () => {
                 {currentUser.nome}
               </p>
               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                {currentUser.role === 'SUPER_ADMIN' ? 'Super Administrador' : 'Multiplicador'}
+                {currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MASTER' ? 'Super Administrador' : 'Multiplicador'}
               </p>
             </div>
             <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">

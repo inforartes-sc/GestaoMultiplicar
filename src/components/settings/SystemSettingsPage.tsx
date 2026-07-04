@@ -95,7 +95,13 @@ export const SystemSettingsPage: React.FC = () => {
                 type="text"
                 value={nomeSistema}
                 onChange={(e) => setNomeSistema(e.target.value)}
-                className="w-full bg-white text-slate-900 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                readOnly={currentUser?.role !== 'MASTER'}
+                className={`w-full border rounded-xl px-3.5 py-2.5 text-sm ${
+                  currentUser?.role === 'MASTER'
+                    ? 'bg-white text-slate-900 border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500'
+                    : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed select-none'
+                }`}
+                title={currentUser?.role !== 'MASTER' ? "Apenas o Super Admin Master (desenvolvedor) pode alterar o nome do sistema" : ""}
               />
             </div>
 

@@ -264,12 +264,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data: dbSettings, error: errSettings } = await supabase.from('settings').select('*').eq('id', 1).single();
       if (!errSettings && dbSettings) {
         const mapped = mapSettingsFromDb(dbSettings);
+        let needsUpdate = false;
+        const updateData: any = {};
+        
         if (mapped.nomeSistema === 'EleitoPro • Gestão 360º' || mapped.nomeSistema.toLowerCase().includes('eleitorpro') || mapped.nomeSistema.toLowerCase().includes('eleitopro')) {
           mapped.nomeSistema = 'Multiplicador 360';
+          updateData.nome_sistema = 'Multiplicador 360';
+          needsUpdate = true;
+        }
+        
+        if (mapped.textoRodape.toLowerCase().includes('eleitopro') || mapped.textoRodape.toLowerCase().includes('eleitorpro')) {
+          const novoRodape = '© 2026 Multiplicador 360 Sistema de Gerenciamento Político & Contatos - Conformidade LGPD Garantida.';
+          mapped.textoRodape = novoRodape;
+          updateData.texto_rodape = novoRodape;
+          needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
           try {
-            await supabase.from('settings').update({ nome_sistema: 'Multiplicador 360' }).eq('id', 1);
+            await supabase.from('settings').update(updateData).eq('id', 1);
           } catch (updateErr) {
-            console.error("Erro ao atualizar nome do sistema no Supabase:", updateErr);
+            console.error("Erro ao atualizar configurações no Supabase:", updateErr);
           }
         }
         setSettings(mapped);
@@ -293,12 +308,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
 
-      const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+      const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MASTER';
 
       // 2. Buscar Usuários (Somente Super Admin lê todos; Multiplicador vê apenas ele mesmo)
       if (isSuperAdmin) {
         const { data: dbUsers, error: errUsers } = await supabase.from('users').select('*');
         if (!errUsers && dbUsers) {
+          // Atualiza automaticamente o usuário master se ainda for o antigo no banco de dados
+          const oldAdmin = dbUsers.find(u => u.login === 'admin' || u.id === 'usr-admin-01');
+          if (oldAdmin && (oldAdmin.login !== 'superadmin' || oldAdmin.nome !== 'Olzenis Gomes' || oldAdmin.role !== 'MASTER')) {
+            try {
+              await supabase.from('users').update({
+                nome: 'Olzenis Gomes',
+                login: 'superadmin',
+                role: 'MASTER'
+              }).eq('id', 'usr-admin-01');
+              dbUsers.forEach(u => {
+                if (u.id === 'usr-admin-01') {
+                  u.nome = 'Olzenis Gomes';
+                  u.login = 'superadmin';
+                  u.role = 'MASTER';
+                }
+              });
+            } catch (updateErr) {
+              console.error("Erro ao atualizar usuário master no Supabase:", updateErr);
+            }
+          }
+          
           if (dbUsers.length === 0) {
             try {
               await supabase.from('users').insert(INITIAL_USERS.map(mapUserToDb));
@@ -384,7 +420,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const saved = localStorage.getItem('eleitopro_current_user_v1');
     if (saved) {
-      try { setCurrentUser(JSON.parse(saved)); } catch { }
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.id === 'usr-admin-01' && (parsed.login !== 'superadmin' || parsed.nome !== 'Olzenis Gomes')) {
+          parsed.nome = 'Olzenis Gomes';
+          parsed.login = 'superadmin';
+          parsed.role = 'MASTER';
+          localStorage.setItem('eleitopro_current_user_v1', JSON.stringify(parsed));
+        }
+        setCurrentUser(parsed);
+      } catch { }
     }
   }, []);
 
@@ -437,7 +482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           setCurrentUser(dbUser);
           setActiveTab('dashboard');
-          await logAction('LOGIN', 'SESSAO', `Sessão iniciada como ${dbUser.role === 'SUPER_ADMIN' ? 'Super Administrador' : 'Multiplicador'}.`);
+          await logAction('LOGIN', 'SESSAO', `Sessão iniciada como ${dbUser.role === 'SUPER_ADMIN' || dbUser.role === 'MASTER' ? 'Super Administrador' : 'Multiplicador'}.`);
           return { success: true };
         }
       } else if (error) {
@@ -457,7 +502,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setCurrentUser(found);
     setActiveTab('dashboard');
-    await logAction('LOGIN', 'SESSAO', `Sessão iniciada localmente como ${found.role === 'SUPER_ADMIN' ? 'Super Administrador' : 'Multiplicador'}.`);
+    await logAction('LOGIN', 'SESSAO', `Sessão iniciada localmente como ${found.role === 'SUPER_ADMIN' || found.role === 'MASTER' ? 'Super Administrador' : 'Multiplicador'}.`);
     return { success: true };
   };
 
@@ -717,7 +762,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const getFilteredEleitores = () => {
     if (!currentUser) return [];
-    if (currentUser.role === 'SUPER_ADMIN') {
+    if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MASTER') {
       return eleitores;
     }
     return eleitores.filter((e) => e.multiplicadorId === currentUser.id);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { Navbar } from './components/common/Navbar';
@@ -12,15 +12,59 @@ import { LgpdCompliancePage } from './components/settings/LgpdCompliancePage';
 import { SystemSettingsPage } from './components/settings/SystemSettingsPage';
 import { Menu, ShieldAlert } from 'lucide-react';
 
+const adjustColorBrightness = (hex: string, percent: number) => {
+  if (!hex || hex.length < 7 || hex[0] !== '#') return hex;
+  try {
+    let R = parseInt(hex.substring(1, 3), 16);
+    let G = parseInt(hex.substring(3, 5), 16);
+    let B = parseInt(hex.substring(5, 7), 16);
+
+    R = Math.max(0, Math.min(255, R + percent));
+    G = Math.max(0, Math.min(255, G + percent));
+    B = Math.max(0, Math.min(255, B + percent));
+
+    const rHex = R.toString(16).padStart(2, '0');
+    const gHex = G.toString(16).padStart(2, '0');
+    const bHex = B.toString(16).padStart(2, '0');
+
+    return `#${rHex}${gHex}${bHex}`;
+  } catch {
+    return hex;
+  }
+};
+
 const MainLayout: React.FC = () => {
   const { currentUser, activeTab, setActiveTab, settings } = useApp();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      const primary = settings.corPrincipal || '#2563eb';
+      const secondary = settings.corSecundaria || '#1e40af';
+      const root = document.documentElement;
+
+      // Sobrescreve as cores do Tailwind v4 no :root
+      root.style.setProperty('--color-blue-600', primary);
+      root.style.setProperty('--color-blue-500', adjustColorBrightness(primary, 20));
+      root.style.setProperty('--color-blue-700', adjustColorBrightness(primary, -20));
+      root.style.setProperty('--color-blue-800', secondary);
+
+      root.style.setProperty('--color-indigo-600', primary);
+      root.style.setProperty('--color-indigo-500', adjustColorBrightness(primary, 20));
+      root.style.setProperty('--color-indigo-700', adjustColorBrightness(primary, -20));
+      root.style.setProperty('--color-indigo-800', secondary);
+      root.style.setProperty('--color-indigo-900', adjustColorBrightness(secondary, -20));
+
+      root.style.setProperty('--color-primary', primary);
+      root.style.setProperty('--color-secondary', secondary);
+    }
+  }, [settings]);
 
   if (!currentUser) {
     return <LoginPage />;
   }
 
-  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MASTER';
 
   const renderContent = () => {
     switch (activeTab) {

@@ -34,7 +34,7 @@ export const MultiplicadoresList: React.FC = () => {
   const [newPassword, setNewPassword] = useState('123456');
   const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
 
-  const multiplicadores = users.filter((u) => u.role === 'MULTIPLICADOR');
+  const multiplicadores = users.filter((u) => u.role !== 'MASTER');
 
   const handleDelete = (u: User) => {
     const contagem = eleitores.filter((e) => e.multiplicadorId === u.id).length;
@@ -126,7 +126,14 @@ export const MultiplicadoresList: React.FC = () => {
                       {m.nome.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-bold text-sm text-slate-900 truncate">{m.nome}</h3>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h3 className="font-bold text-sm text-slate-900 truncate" title={m.nome}>{m.nome}</h3>
+                        {m.role === 'SUPER_ADMIN' && (
+                          <span className="px-1.5 py-0.5 rounded-sm bg-blue-100 text-blue-800 text-[8px] font-black uppercase tracking-wider shrink-0" title="Administrador do Sistema">
+                            Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500 font-mono">Login: {m.login}</p>
                     </div>
                   </div>
