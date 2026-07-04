@@ -10,7 +10,7 @@ interface MultiplicadorFormModalProps {
 }
 
 export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ isOpen, onClose, userToEdit }) => {
-  const { addUser, updateUser } = useApp();
+  const { addUser, updateUser, currentUser, candidatos } = useApp();
 
   const [nome, setNome] = useState('');
   const [loginStr, setLoginStr] = useState('');
@@ -20,6 +20,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
   const [situacao, setSituacao] = useState<'ATIVO' | 'INATIVO'>('ATIVO');
   const [metaMensal, setMetaMensal] = useState<number>(30);
   const [role, setRole] = useState<'SUPER_ADMIN' | 'MULTIPLICADOR'>('MULTIPLICADOR');
+  const [candidatoId, setCandidatoId] = useState<string>('candidato-padrao');
 
   useEffect(() => {
     if (userToEdit) {
@@ -31,6 +32,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
       setSituacao(userToEdit.situacao);
       setMetaMensal(userToEdit.metaMensal || 30);
       setRole(userToEdit.role || 'MULTIPLICADOR');
+      setCandidatoId(userToEdit.candidatoId || 'candidato-padrao');
     } else {
       setNome('');
       setLoginStr('');
@@ -40,6 +42,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
       setSituacao('ATIVO');
       setMetaMensal(30);
       setRole('MULTIPLICADOR');
+      setCandidatoId('candidato-padrao');
     }
   }, [userToEdit, isOpen]);
 
@@ -52,6 +55,8 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
       return;
     }
 
+    const targetCandId = currentUser?.role === 'MASTER' ? candidatoId : currentUser?.candidatoId;
+
     if (userToEdit) {
       updateUser(userToEdit.id, {
         nome,
@@ -61,6 +66,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
         situacao,
         role,
         metaMensal: Number(metaMensal) || 25,
+        candidatoId: targetCandId,
       });
     } else {
       addUser({
@@ -72,13 +78,14 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
         situacao,
         role,
         metaMensal: Number(metaMensal) || 25,
+        candidatoId: targetCandId,
       });
     }
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-955/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
         
         <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
@@ -97,6 +104,24 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+          
+          {currentUser?.role === 'MASTER' && (
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Candidato / Campanha Associada *</label>
+              <select
+                value={candidatoId}
+                onChange={(e) => setCandidatoId(e.target.value)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white font-bold text-indigo-700"
+              >
+                {candidatos.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    🎨 {c.nome} ({c.nomeSistema})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block font-bold text-slate-700 mb-1">Nome Completo *</label>
             <input

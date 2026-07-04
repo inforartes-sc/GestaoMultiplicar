@@ -19,6 +19,16 @@ export const SystemSettingsPage: React.FC = () => {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [senhaErro, setSenhaErro] = useState<string | null>(null);
   const [senhaSalva, setSenhaSalva] = useState(false);
+  // Sincronizar estados locais se as configurações do AppContext mudarem
+  React.useEffect(() => {
+    setNomeSistema(settings.nomeSistema || 'Multiplicador 360');
+    setCandidatoApoiado(settings.candidatoApoiado || '');
+    setCorPrincipal(settings.corPrincipal || '#2563eb');
+    setCorSecundaria(settings.corSecundaria || '#1e40af');
+    setTextoRodape(settings.textoRodape || '© 2026 Multiplicador 360 — Sistema de Gestão Estratégica');
+    setMetaMensalPadrao(settings.metaMensalPadrao || 25);
+    setRetencaoDadosMeses(settings.retencaoDadosMeses || 48);
+  }, [settings]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +100,7 @@ export const SystemSettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Nome do Sistema</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Nome do Sistema</label>
               <input
                 type="text"
                 value={nomeSistema}
@@ -98,10 +108,9 @@ export const SystemSettingsPage: React.FC = () => {
                 readOnly={currentUser?.role !== 'MASTER'}
                 className={`w-full border rounded-xl px-3.5 py-2.5 text-sm ${
                   currentUser?.role === 'MASTER'
-                    ? 'bg-white text-slate-900 border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500'
+                    ? 'bg-white text-slate-900 border-slate-300 focus:border-blue-600 focus:outline-hidden'
                     : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed select-none'
                 }`}
-                title={currentUser?.role !== 'MASTER' ? "Apenas o Super Admin Master (desenvolvedor) pode alterar o nome do sistema" : ""}
               />
             </div>
 
@@ -160,6 +169,7 @@ export const SystemSettingsPage: React.FC = () => {
                 />
               </div>
             </div>
+
           </div>
         </div>
 
@@ -201,13 +211,18 @@ export const SystemSettingsPage: React.FC = () => {
         {/* Rodapé do Sistema */}
         <div>
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-            <Database className="w-4 h-4 text-slate-500" /> 4. Texto de Rodapé do Sistema (Exclusivo do Sistema)
+            <Database className="w-4 h-4 text-slate-500" /> 4. Texto de Rodapé do Sistema
           </h3>
           <input
             type="text"
-            readOnly
             value={textoRodape}
-            className="w-full bg-slate-50 text-slate-500 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs cursor-not-allowed select-none"
+            onChange={(e) => setTextoRodape(e.target.value)}
+            readOnly={currentUser?.role !== 'MASTER'}
+            className={`w-full border rounded-xl px-3.5 py-2.5 text-xs ${
+              currentUser?.role === 'MASTER'
+                ? 'bg-white text-slate-900 border-slate-300 focus:border-blue-600 focus:outline-hidden'
+                : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed select-none'
+            }`}
           />
         </div>
 

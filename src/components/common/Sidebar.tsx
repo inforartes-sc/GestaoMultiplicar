@@ -7,7 +7,8 @@ import {
   ShieldCheck, 
   Settings, 
   FileText, 
-  Database
+  Database,
+  Layers
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -16,7 +17,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen }) => {
-  const { currentUser, activeTab, setActiveTab, getFilteredEleitores, users, settings } = useApp();
+  const { currentUser, activeTab, setActiveTab, getFilteredEleitores, users, settings, candidatos } = useApp();
 
   if (!currentUser) return null;
 
@@ -31,6 +32,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
       badge: null,
       adminOnly: false,
     },
+    ...(currentUser.role === 'MASTER' ? [{
+      id: 'candidatos',
+      label: 'Candidatos',
+      icon: Layers,
+      badge: candidatos.length,
+      adminOnly: true,
+    }] : []),
     {
       id: 'eleitores',
       label: 'Eleitores',
@@ -42,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
       id: 'multiplicadores',
       label: 'Multiplicadores',
       icon: UserPlus,
-      badge: isSuperAdmin ? users.length : null,
+      badge: isSuperAdmin ? users.filter((u) => u.role !== 'MASTER').length : null,
       adminOnly: true,
     },
     {

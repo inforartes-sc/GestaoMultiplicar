@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 export const MultiplicadoresList: React.FC = () => {
-  const { users, eleitores, deleteUser, toggleUserStatus, resetUserPassword } = useApp();
+  const { users, eleitores, deleteUser, toggleUserStatus, resetUserPassword, candidatos, currentUser } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userEditing, setUserEditing] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -33,8 +33,13 @@ export const MultiplicadoresList: React.FC = () => {
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('123456');
   const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+  const [filterCandidatoId, setFilterCandidatoId] = useState<string>('all');
 
   const multiplicadores = users.filter((u) => u.role !== 'MASTER');
+
+  const filteredMultiplicadores = filterCandidatoId === 'all'
+    ? multiplicadores
+    : multiplicadores.filter(m => m.candidatoId === filterCandidatoId);
 
   const handleDelete = (u: User) => {
     const contagem = eleitores.filter((e) => e.multiplicadorId === u.id).length;
@@ -53,7 +58,7 @@ export const MultiplicadoresList: React.FC = () => {
 
   const handlePrintReport = () => {
     const cabecalhos = ['Nome do Multiplicador', 'Login', 'Telefone', 'Cidade', 'Situação', 'Cadastros', 'Meta'];
-    const linhas = multiplicadores.map((m) => {
+    const linhas = filteredMultiplicadores.map((m) => {
       const contagem = eleitores.filter((e) => e.multiplicadorId === m.id).length;
       return [
         m.nome,
@@ -65,7 +70,7 @@ export const MultiplicadoresList: React.FC = () => {
         `${m.metaMensal || 25} (${Math.round((contagem / (m.metaMensal || 25)) * 100)}%)`,
       ];
     });
-    printOrExportPDF('Relatório Geral de Multiplicadores Políticos', `Equipe de coordenação • Total: ${multiplicadores.length} lideranças`, cabecalhos, linhas);
+    printOrExportPDF('Relatório Geral de Multiplicadores Políticos', `Equipe de coordenação • Total: ${filteredMultiplicadores.length} lideranças`, cabecalhos, linhas);
   };
 
   return (
@@ -84,6 +89,19 @@ export const MultiplicadoresList: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          {currentUser?.role === 'MASTER' && (
+            <select
+              value={filterCandidatoId}
+              onChange={(e) => setFilterCandidatoId(e.target.value)}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-indigo-850 focus:outline-hidden cursor-pointer"
+            >
+              <option value="all">🔍 Todos os Candidatos</option>
+              {candidatos.map(c => (
+                <option key={c.id} value={c.id}>🎨 {c.nome}</option>
+              ))}
+            </select>
+          )}
+
           <button
             onClick={handlePrintReport}
             className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5"
@@ -105,10 +123,11 @@ export const MultiplicadoresList: React.FC = () => {
 
       {/* Grid de Multiplicadores */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {multiplicadores.map((m) => {
+        {filteredMultiplicadores.map((m) => {
           const cadastrados = eleitores.filter((e) => e.multiplicadorId === m.id).length;
           const meta = m.metaMensal || 25;
           const percentual = Math.min(Math.round((cadastrados / meta) * 100), 100);
+          const cand = candidatos.find(c => c.id === m.candidatoId);
 
           return (
             <div
@@ -126,11 +145,16 @@ export const MultiplicadoresList: React.FC = () => {
                       {m.nome.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         <h3 className="font-bold text-sm text-slate-900 truncate" title={m.nome}>{m.nome}</h3>
                         {m.role === 'SUPER_ADMIN' && (
                           <span className="px-1.5 py-0.5 rounded-sm bg-blue-100 text-blue-800 text-[8px] font-black uppercase tracking-wider shrink-0" title="Administrador do Sistema">
                             Admin
+                          </span>
+                        )}
+                        {cand && (
+                          <span className="px-1.5 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 border border-indigo-200 text-[8px] font-bold uppercase shrink-0" title={`Candidato: ${cand.nome}`}>
+                            {cand.nome}
                           </span>
                         )}
                       </div>

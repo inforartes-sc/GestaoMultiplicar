@@ -34,10 +34,13 @@ export const SuperAdminDashboard: React.FC = () => {
   const { eleitores, users, auditLogs, setActiveTab } = useApp();
   const [viewingEleitoresFor, setViewingEleitoresFor] = useState<any>(null);
 
+  // Filtrar usuários que não são MASTER (o super admin global não deve aparecer no painel)
+  const multiplicadoresFiltrados = users.filter(u => u.role !== 'MASTER');
+
   // 1. Estatísticas Rápidas
   const totalEleitores = eleitores.length;
-  const totalMultiplicadores = users.length;
-  const multiplicadoresAtivos = users.filter(u => u.situacao === 'ATIVO').length;
+  const totalMultiplicadores = multiplicadoresFiltrados.length;
+  const multiplicadoresAtivos = multiplicadoresFiltrados.filter(u => u.situacao === 'ATIVO').length;
 
   const hojeStr = new Date().toISOString().split('T')[0];
   const cadastrosHoje = eleitores.filter(e => e.dataCadastro.startsWith(hojeStr)).length;
@@ -57,7 +60,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const totalPessoasInfluenciadas = eleitores.reduce((acc, curr) => acc + (curr.quantidadeInfluenciados || 0), 0);
 
   // 2. Ranking de Multiplicadores
-  const rankingMultiplicadores = users
+  const rankingMultiplicadores = multiplicadoresFiltrados
     .map(u => {
       const contagem = eleitores.filter(e => e.multiplicadorId === u.id).length;
       const meta = u.metaMensal || 25;
@@ -256,7 +259,7 @@ export const SuperAdminDashboard: React.FC = () => {
             </div>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dadosBairro} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                <BarChart data={dadosBairro} layout="vertical" margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
                   <Tooltip />

@@ -1,5 +1,20 @@
 export type Role = 'MASTER' | 'SUPER_ADMIN' | 'MULTIPLICADOR';
 
+export interface Candidato {
+  id: string;
+  nome: string;
+  nomeSistema: string;
+  candidatoApoiado: string;
+  corPrincipal: string;
+  corSecundaria: string;
+  textoRodape: string;
+  logoUrl?: string;
+  metaMensalPadrao: number;
+  exigirConsentimentoLGPD: boolean;
+  retencaoDadosMeses: number;
+  dataCriacao?: string;
+}
+
 export interface User {
   id: string;
   nome: string;
@@ -12,6 +27,7 @@ export interface User {
   dataCriacao: string;
   avatar?: string;
   metaMensal?: number;
+  candidatoId?: string;
 }
 
 export type TipoDocumento = 'RG' | 'CPF' | 'TITULO_ELEITOR' | 'COMPROVANTE_RESIDENCIA' | 'OUTROS';
@@ -32,6 +48,7 @@ export interface Eleitor {
   multiplicadorNome: string;
   dataCadastro: string;
   ultimaAlteracao: string;
+  candidatoId?: string;
 
   // Dados Pessoais
   nomeCompleto: string;
@@ -98,6 +115,7 @@ export interface AuditLog {
   dataHora: string;
   ip: string;
   detalhes: string;
+  candidatoId?: string;
 }
 
 export type TipoNotificacao = 'NOVO_CADASTRO' | 'MULTIPLICADOR_INATIVO' | 'CADASTRO_INCOMPLETO' | 'SISTEMA' | 'META_ATINGIDA';
@@ -111,6 +129,7 @@ export interface NotificationItem {
   lido: boolean;
   multiplicadorId?: string;
   eleitorId?: string;
+  candidatoId?: string;
 }
 
 export interface SystemSettings {

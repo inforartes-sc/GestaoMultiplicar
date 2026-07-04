@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Eleitor, AuditLog, NotificationItem, SystemSettings, TipoAcaoAudit } from '../types';
+import { User, Eleitor, AuditLog, NotificationItem, SystemSettings, TipoAcaoAudit, Candidato } from '../types';
 import { INITIAL_USERS, INITIAL_ELEITORES, INITIAL_AUDIT_LOGS, INITIAL_NOTIFICATIONS, INITIAL_SETTINGS } from '../data/initialData';
 import { supabase } from '../utils/supabaseClient';
 
@@ -10,6 +10,9 @@ interface AppContextType {
   auditLogs: AuditLog[];
   notifications: NotificationItem[];
   settings: SystemSettings;
+  candidatos: Candidato[];
+  selectedCandidatoId: string | null;
+  setSelectedCandidatoId: (id: string | null) => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   login: (loginStr: string, senhaStr: string) => Promise<{ success: boolean; message?: string }>;
@@ -25,6 +28,10 @@ interface AppContextType {
   deleteUser: (id: string) => Promise<void>;
   toggleUserStatus: (id: string) => Promise<void>;
   resetUserPassword: (id: string, novaSenha: string) => Promise<void>;
+  // CRUD Candidatos
+  addCandidato: (novo: Omit<Candidato, 'id' | 'createdAt'>) => Promise<void>;
+  updateCandidato: (id: string, atualizado: Partial<Candidato>) => Promise<void>;
+  deleteCandidato: (id: string) => Promise<void>;
   // Notificações e Audit
   markNotificationAsRead: (id: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
@@ -50,6 +57,7 @@ const mapUserFromDb = (u: any): User => ({
   role: u.role || 'MULTIPLICADOR',
   dataCriacao: u.data_criacao || new Date().toISOString(),
   metaMensal: u.meta_mensal || 25,
+  candidatoId: u.candidato_id || undefined,
 });
 
 const mapUserToDb = (u: Partial<User>) => {
@@ -64,12 +72,13 @@ const mapUserToDb = (u: Partial<User>) => {
   if (u.role !== undefined) data.role = u.role;
   if (u.dataCriacao !== undefined) data.data_criacao = u.dataCriacao;
   if (u.metaMensal !== undefined) data.meta_mensal = u.metaMensal;
+  if (u.candidatoId !== undefined) data.candidato_id = u.candidatoId;
   return data;
 };
 
 const mapSettingsFromDb = (s: any): SystemSettings => ({
-  nomeSistema: (s.nome_sistema || 'Multiplicador 360').trim(),
-  candidatoApoiado: s.candidato_apoiado || '',
+  nomeSistema: (s.nome_sistema || s.nome || 'Multiplicador 360').trim(),
+  candidatoApoiado: s.candidato_apoiado || s.nome || '',
   corPrincipal: s.cor_principal || '#2563eb',
   corSecundaria: s.cor_secundaria || '#1e40af',
   textoRodape: s.texto_rodape || '',
@@ -91,6 +100,37 @@ const mapSettingsToDb = (s: Partial<SystemSettings>) => {
   return data;
 };
 
+const mapCandidatoFromDb = (c: any): Candidato => ({
+  id: c.id,
+  nome: c.nome,
+  nomeSistema: c.nome_sistema || 'Multiplicador 360',
+  candidatoApoiado: c.candidato_apoiado || '',
+  corPrincipal: c.cor_principal || '#2563eb',
+  corSecundaria: c.cor_secundaria || '#1e40af',
+  textoRodape: c.texto_rodape || '',
+  logoUrl: c.logo_url || undefined,
+  metaMensalPadrao: c.meta_mensal_padrao || 25,
+  exigirConsentimentoLGPD: c.exigir_consentimento_lgpd !== false,
+  retencaoDadosMeses: c.retencao_dados_meses || 48,
+  dataCriacao: c.created_at || new Date().toISOString(),
+});
+
+const mapCandidatoToDb = (c: Partial<Candidato>) => {
+  const data: any = {};
+  if (c.id !== undefined) data.id = c.id;
+  if (c.nome !== undefined) data.nome = c.nome;
+  if (c.nomeSistema !== undefined) data.nome_sistema = c.nomeSistema;
+  if (c.candidatoApoiado !== undefined) data.candidato_apoiado = c.candidatoApoiado;
+  if (c.corPrincipal !== undefined) data.cor_principal = c.corPrincipal;
+  if (c.corSecundaria !== undefined) data.cor_secundaria = c.corSecundaria;
+  if (c.textoRodape !== undefined) data.texto_rodape = c.textoRodape;
+  if (c.logoUrl !== undefined) data.logo_url = c.logoUrl;
+  if (c.metaMensalPadrao !== undefined) data.meta_mensal_padrao = c.metaMensalPadrao;
+  if (c.exigirConsentimentoLGPD !== undefined) data.exigir_consentimento_lgpd = c.exigirConsentimentoLGPD;
+  if (c.retencaoDadosMeses !== undefined) data.retencao_dados_meses = c.retencaoDadosMeses;
+  return data;
+};
+
 const mapAuditFromDb = (a: any): AuditLog => ({
   id: a.id,
   acao: a.acao,
@@ -101,6 +141,7 @@ const mapAuditFromDb = (a: any): AuditLog => ({
   dataHora: a.data_hora || new Date().toISOString(),
   ip: a.ip || '',
   detalhes: a.detalhes || '',
+  candidatoId: a.candidato_id || undefined,
 });
 
 const mapAuditToDb = (a: AuditLog) => ({
@@ -113,6 +154,7 @@ const mapAuditToDb = (a: AuditLog) => ({
   data_hora: a.dataHora,
   ip: a.ip,
   detalhes: a.detalhes,
+  candidato_id: a.candidatoId,
 });
 
 const mapNotificationFromDb = (n: any): NotificationItem => ({
@@ -124,6 +166,7 @@ const mapNotificationFromDb = (n: any): NotificationItem => ({
   lido: n.lido || false,
   multiplicadorId: n.multiplicador_id || undefined,
   eleitorId: n.eleitor_id || undefined,
+  candidatoId: n.candidato_id || undefined,
 });
 
 const mapNotificationToDb = (n: Partial<NotificationItem>) => {
@@ -136,6 +179,7 @@ const mapNotificationToDb = (n: Partial<NotificationItem>) => {
   if (n.lido !== undefined) data.lido = n.lido;
   if (n.multiplicadorId !== undefined) data.multiplicador_id = n.multiplicadorId;
   if (n.eleitorId !== undefined) data.eleitor_id = n.eleitorId;
+  if (n.candidatoId !== undefined) data.candidato_id = n.candidatoId;
   return data;
 };
 
@@ -243,6 +287,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [settings, setSettings] = useState<SystemSettings>(INITIAL_SETTINGS);
+  const [candidatos, setCandidatos] = useState<Candidato[]>([]);
+  const [selectedCandidatoId, setSelectedCandidatoId] = useState<string | null>(null);
+  
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('eleitopro_current_user_v1');
     if (saved) {
@@ -260,42 +307,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Buscar dados do Supabase
   const fetchData = async () => {
     try {
-      // 1. Sempre buscar Configurações (necessário para a tela de login/marca)
-      const { data: dbSettings, error: errSettings } = await supabase.from('settings').select('*').eq('id', 1).single();
-      if (!errSettings && dbSettings) {
-        const mapped = mapSettingsFromDb(dbSettings);
-        let needsUpdate = false;
-        const updateData: any = {};
-        
-        if (mapped.nomeSistema === 'EleitoPro • Gestão 360º' || mapped.nomeSistema.toLowerCase().includes('eleitorpro') || mapped.nomeSistema.toLowerCase().includes('eleitopro')) {
-          mapped.nomeSistema = 'Multiplicador 360';
-          updateData.nome_sistema = 'Multiplicador 360';
-          needsUpdate = true;
-        }
-        
-        if (mapped.textoRodape.toLowerCase().includes('eleitopro') || mapped.textoRodape.toLowerCase().includes('eleitorpro')) {
-          const novoRodape = '© 2026 Multiplicador 360 Sistema de Gerenciamento Político & Contatos - Conformidade LGPD Garantida.';
-          mapped.textoRodape = novoRodape;
-          updateData.texto_rodape = novoRodape;
-          needsUpdate = true;
-        }
-        
-        if (needsUpdate) {
-          try {
-            await supabase.from('settings').update(updateData).eq('id', 1);
-          } catch (updateErr) {
-            console.error("Erro ao atualizar configurações no Supabase:", updateErr);
-          }
-        }
-        setSettings(mapped);
-      } else {
-        console.log("Configurações não encontradas. Semeando configurações iniciais...");
+      // 1. Determinar o candidato ativo para carregar as configurações de marca
+      const activeCandId = currentUser ? (currentUser.role === 'MASTER' ? (selectedCandidatoId || 'candidato-padrao') : currentUser.candidatoId) : 'candidato-padrao';
+      let settingsLoaded = false;
+
+      if (activeCandId) {
         try {
-          const { error } = await supabase.from('settings').insert([{ id: 1, ...mapSettingsToDb(INITIAL_SETTINGS) }]);
-          if (error) console.error("Erro ao semear configurações no Supabase:", error.message);
+          const { data: dbCand, error: errCand } = await supabase.from('candidatos').select('*').eq('id', activeCandId).single();
+          if (!errCand && dbCand) {
+            setSettings(mapSettingsFromDb(dbCand));
+            settingsLoaded = true;
+          }
+        } catch (candErr) {
+          console.warn("Tabela 'candidatos' não disponível ainda. Usando fallback.");
+        }
+      }
+
+      if (!settingsLoaded) {
+        const { data: dbSettings, error: errSettings } = await supabase.from('settings').select('*').eq('id', 1).single();
+        if (!errSettings && dbSettings) {
+          setSettings(mapSettingsFromDb(dbSettings));
+        } else {
           setSettings(INITIAL_SETTINGS);
-        } catch (settingsErr) {
-          console.error("Falha ao semear configurações iniciais no Supabase", settingsErr);
         }
       }
 
@@ -305,14 +338,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setEleitores([]);
         setAuditLogs([]);
         setNotifications([]);
+        setCandidatos([]);
         return;
       }
 
-      const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MASTER';
+      const isMaster = currentUser.role === 'MASTER';
+      const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || isMaster;
 
-      // 2. Buscar Usuários (Somente Super Admin lê todos; Multiplicador vê apenas ele mesmo)
+      // 2. Se for MASTER, buscar a lista de todos os candidatos cadastrados
+      if (isMaster) {
+        try {
+          const { data: dbCands, error: errCands } = await supabase.from('candidatos').select('*').order('nome', { ascending: true });
+          if (!errCands && dbCands) {
+            setCandidatos(dbCands.map(mapCandidatoFromDb));
+          }
+        } catch (candsErr) {
+          console.warn("Erro ao buscar candidatos:", candsErr);
+        }
+      }
+
+      // Definir ID do candidato para filtro de consultas
+      const targetCandidatoId = isMaster ? selectedCandidatoId : currentUser.candidatoId;
+
+      // 3. Buscar Usuários (Somente Super Admin lê todos; Multiplicador vê apenas ele mesmo)
       if (isSuperAdmin) {
-        const { data: dbUsers, error: errUsers } = await supabase.from('users').select('*');
+        let queryUsers = supabase.from('users').select('*');
+        if (targetCandidatoId) {
+          // Coordenadores vêem usuários do candidato ou administradores globais (MASTER)
+          queryUsers = queryUsers.or(`candidato_id.eq.${targetCandidatoId},role.eq.MASTER`);
+        }
+        const { data: dbUsers, error: errUsers } = await queryUsers;
         if (!errUsers && dbUsers) {
           // Atualiza automaticamente o usuário master se ainda for o antigo no banco de dados
           const oldAdmin = dbUsers.find(u => u.login === 'admin' || u.id === 'usr-admin-01');
@@ -348,14 +403,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUsers([currentUser]);
       }
 
-      // 3. Buscar Eleitores (Filtrado no banco para segurança LGPD e performance)
+      // 4. Buscar Eleitores
       let queryEleitores = supabase.from('eleitores').select('*');
+      if (targetCandidatoId) {
+        queryEleitores = queryEleitores.eq('candidato_id', targetCandidatoId);
+      }
       if (!isSuperAdmin) {
         queryEleitores = queryEleitores.eq('multiplicador_id', currentUser.id);
       }
       const { data: dbEleitores, error: errEleitores } = await queryEleitores;
       if (!errEleitores && dbEleitores) {
-        if (dbEleitores.length === 0 && isSuperAdmin) {
+        if (dbEleitores.length === 0 && isSuperAdmin && !targetCandidatoId) {
           try {
             await supabase.from('eleitores').insert(INITIAL_ELEITORES.map(mapEleitorToDb));
             setEleitores(INITIAL_ELEITORES);
@@ -365,11 +423,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // 4. Buscar Logs de Auditoria (Apenas Super Admin tem acesso)
+      // 5. Buscar Logs de Auditoria (Apenas Super Admin tem acesso)
       if (isSuperAdmin) {
-        const { data: dbAudit, error: errAudit } = await supabase.from('audit_logs').select('*').order('data_hora', { ascending: false });
+        let queryAudit = supabase.from('audit_logs').select('*');
+        if (targetCandidatoId) {
+          queryAudit = queryAudit.eq('candidato_id', targetCandidatoId);
+        }
+        queryAudit = queryAudit.order('data_hora', { ascending: false });
+        const { data: dbAudit, error: errAudit } = await queryAudit;
         if (!errAudit && dbAudit) {
-          if (dbAudit.length === 0) {
+          if (dbAudit.length === 0 && !targetCandidatoId) {
             try {
               await supabase.from('audit_logs').insert(INITIAL_AUDIT_LOGS.map(mapAuditToDb));
               setAuditLogs(INITIAL_AUDIT_LOGS);
@@ -382,15 +445,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuditLogs([]);
       }
 
-      // 5. Buscar Notificações (Filtrado no banco por destinatário)
-      let queryNotif = supabase.from('notifications').select('*').order('data_hora', { ascending: false });
+      // 6. Buscar Notificações (Filtrado no banco por destinatário e candidato)
+      let queryNotif = supabase.from('notifications').select('*');
+      if (targetCandidatoId) {
+        queryNotif = queryNotif.eq('candidato_id', targetCandidatoId);
+      }
       if (!isSuperAdmin) {
         queryNotif = queryNotif.or(`multiplicador_id.eq.${currentUser.id},multiplicador_id.is.null`);
       }
+      queryNotif = queryNotif.order('data_hora', { ascending: false });
       const { data: dbNotif, error: errNotif } = await queryNotif;
       if (!errNotif && dbNotif) {
         const readNotifs = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-        if (dbNotif.length === 0 && isSuperAdmin) {
+        if (dbNotif.length === 0 && isSuperAdmin && !targetCandidatoId) {
           try {
             await supabase.from('notifications').insert(INITIAL_NOTIFICATIONS.map(mapNotificationToDb));
             setNotifications(INITIAL_NOTIFICATIONS.map(n => ({
@@ -452,6 +519,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dataHora: new Date().toISOString(),
       ip: '189.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255) + '.10',
       detalhes,
+      candidatoId: currentUser ? (currentUser.role === 'MASTER' ? (selectedCandidatoId || undefined) : currentUser.candidatoId) : undefined,
     };
 
     setAuditLogs((prev) => [log, ...prev]);
@@ -520,6 +588,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addEleitor = async (novo: Omit<Eleitor, 'id' | 'dataCadastro' | 'ultimaAlteracao' | 'multiplicadorId' | 'multiplicadorNome'>) => {
     if (!currentUser) return;
     const agora = new Date().toISOString();
+    const candId = currentUser.role === 'MASTER' ? (selectedCandidatoId || 'candidato-padrao') : currentUser.candidatoId;
     const novoEleitor: Eleitor = {
       ...novo,
       id: `elt-${Date.now()}`,
@@ -527,6 +596,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       multiplicadorNome: currentUser.nome,
       dataCadastro: agora,
       ultimaAlteracao: agora,
+      candidatoId: candId || undefined,
     };
 
     setEleitores((prev) => [novoEleitor, ...prev]);
@@ -542,6 +612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lido: false,
       eleitorId: novoEleitor.id,
       multiplicadorId: currentUser.id,
+      candidatoId: candId || undefined,
     };
     setNotifications((prev) => [novaNotif, ...prev]);
 
@@ -598,10 +669,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addUser = async (novo: Omit<User, 'id' | 'dataCriacao'>) => {
     const id = `usr-mult-${Date.now().toString().slice(-4)}`;
+    const candId = currentUser?.role === 'MASTER' ? (selectedCandidatoId || 'candidato-padrao') : currentUser?.candidatoId;
     const novoUser: User = {
       ...novo,
       id,
       dataCriacao: new Date().toISOString(),
+      candidatoId: candId || undefined,
     };
     setUsers((prev) => [...prev, novoUser]);
     await logAction('CRIACAO', 'MULTIPLICADOR', `Criou o multiplicador ${novoUser.nome} (${novoUser.login}).`);
@@ -749,14 +822,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSettings((prev) => ({ ...prev, ...novas }));
     await logAction('ALTERACAO', 'SISTEMA', 'Atualizou as configurações gerais e preferências do sistema.');
 
+    const candId = currentUser?.role === 'MASTER' ? (selectedCandidatoId || 'candidato-padrao') : currentUser?.candidatoId;
+
+    if (candId) {
+      try {
+        const mapped = mapSettingsToDb(novas);
+        const { error } = await supabase
+          .from('candidatos')
+          .update(mapped)
+          .eq('id', candId);
+        if (error) console.error("Erro ao salvar configurações do candidato no Supabase:", error.message);
+      } catch (err) {
+        console.warn("Erro ao salvar configurações do candidato no Supabase", err);
+      }
+    } else {
+      try {
+        const { error } = await supabase
+          .from('settings')
+          .update(mapSettingsToDb(novas))
+          .eq('id', 1);
+        if (error) console.error("Erro ao salvar configurações no Supabase:", error.message);
+      } catch (err) {
+        console.warn("Erro ao salvar configurações no Supabase", err);
+      }
+    }
+  };
+
+  const addCandidato = async (novo: Omit<Candidato, 'id' | 'createdAt'>) => {
+    const id = `cand-${Date.now().toString().slice(-4)}`;
+    const novoCand: Candidato = {
+      ...novo,
+      id,
+      dataCriacao: new Date().toISOString(),
+    };
+    setCandidatos((prev) => [...prev, novoCand]);
+    await logAction('CRIACAO', 'SISTEMA', `Cadastrou o candidato ${novoCand.nome}.`);
+
+    try {
+      const { error } = await supabase.from('candidatos').insert([mapCandidatoToDb(novoCand)]);
+      if (error) console.error("Erro ao cadastrar candidato no Supabase:", error.message);
+    } catch (err) {
+      console.warn("Erro ao cadastrar candidato no Supabase", err);
+    }
+  };
+
+  const updateCandidato = async (id: string, atualizado: Partial<Candidato>) => {
+    setCandidatos((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...atualizado } : c))
+    );
+    if (selectedCandidatoId === id || (!selectedCandidatoId && id === 'candidato-padrao')) {
+      setSettings((prev) => ({ ...prev, ...atualizado as any }));
+    }
+    await logAction('ALTERACAO', 'SISTEMA', `Atualizou os dados do candidato ID ${id}.`);
+
     try {
       const { error } = await supabase
-        .from('settings')
-        .update(mapSettingsToDb(novas))
-        .eq('id', 1);
-      if (error) console.error("Erro ao salvar configurações no Supabase:", error.message);
+        .from('candidatos')
+        .update(mapCandidatoToDb(atualizado))
+        .eq('id', id);
+      if (error) console.error("Erro ao atualizar candidato no Supabase:", error.message);
     } catch (err) {
-      console.warn("Erro ao salvar configurações no Supabase", err);
+      console.warn("Erro ao atualizar candidato no Supabase", err);
+    }
+  };
+
+  const deleteCandidato = async (id: string) => {
+    const alvo = candidatos.find((c) => c.id === id);
+    setCandidatos((prev) => prev.filter((c) => c.id !== id));
+    if (alvo) {
+      await logAction('EXCLUSAO', 'SISTEMA', `Excluiu permanentemente o candidato ${alvo.nome}.`);
+    }
+
+    try {
+      const { error } = await supabase.from('candidatos').delete().eq('id', id);
+      if (error) console.error("Erro ao excluir candidato no Supabase:", error.message);
+    } catch (err) {
+      console.warn("Erro ao excluir candidato no Supabase", err);
     }
   };
 
@@ -777,6 +918,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         auditLogs,
         notifications,
         settings,
+        candidatos,
+        selectedCandidatoId,
+        setSelectedCandidatoId,
         activeTab,
         setActiveTab,
         login,
@@ -790,6 +934,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteUser,
         toggleUserStatus,
         resetUserPassword,
+        addCandidato,
+        updateCandidato,
+        deleteCandidato,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         logAction,

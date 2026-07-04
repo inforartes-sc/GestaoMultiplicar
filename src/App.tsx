@@ -10,6 +10,7 @@ import { MultiplicadoresList } from './components/multiplicadores/Multiplicadore
 import { AuditLogsPage } from './components/audit/AuditLogsPage';
 import { LgpdCompliancePage } from './components/settings/LgpdCompliancePage';
 import { SystemSettingsPage } from './components/settings/SystemSettingsPage';
+import { CandidatosList } from './components/candidatos/CandidatosList';
 import { Menu, ShieldAlert } from 'lucide-react';
 
 const adjustColorBrightness = (hex: string, percent: number) => {
@@ -70,6 +71,19 @@ const MainLayout: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return isSuperAdmin ? <SuperAdminDashboard /> : <MultiplicadorDashboard />;
+      case 'candidatos':
+        if (!isSuperAdmin || currentUser.role !== 'MASTER') {
+          return (
+            <div className="bg-red-50 border border-red-200 p-8 rounded-3xl text-center max-w-lg mx-auto my-12">
+              <ShieldAlert className="w-12 h-12 text-red-600 mx-auto mb-3" />
+              <h2 className="text-lg font-bold text-red-950">Acesso Restrito ao Super Administrador Master</h2>
+              <p className="text-xs text-red-800 mt-2">
+                Apenas o desenvolvedor master pode acessar e administrar a base global de candidatos.
+              </p>
+            </div>
+          );
+        }
+        return <CandidatosList />;
       case 'eleitores':
         return <EleitoresList />;
       case 'multiplicadores':
@@ -131,7 +145,7 @@ const MainLayout: React.FC = () => {
         {/* Botão Mobile de Abertura de Menu */}
         <div className="lg:hidden bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between border-b border-slate-800 shrink-0">
           <span className="text-xs font-bold text-slate-300">
-            📍 {currentUser.role === 'SUPER_ADMIN' ? 'Centro de Comando' : `Zona: ${currentUser.cidade}`}
+            ⚡ {settings.nomeSistema || 'Multiplicador 360'}
           </span>
           <button
             onClick={() => setIsMobileSidebarOpen(true)}
@@ -150,7 +164,9 @@ const MainLayout: React.FC = () => {
 
         {/* System Footer */}
         <footer className="h-10 bg-slate-100 border-t border-slate-200 px-4 sm:px-8 flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-widest shrink-0">
-          <div className="truncate">© {new Date().getFullYear()} {settings.nomeSistema || 'Multiplicador 360'} — Sistema de Gestão Estratégica</div>
+          <div className="truncate">
+            {settings.textoRodape || `© ${new Date().getFullYear()} ${settings.nomeSistema || 'Multiplicador 360'} — Sistema de Gestão Estratégica`}
+          </div>
           <div className="hidden sm:flex items-center gap-4">
             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Status: Online</span>
             <span>Segurança: SSL Criptografado</span>
