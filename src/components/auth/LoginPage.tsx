@@ -88,7 +88,7 @@ export const LoginPage: React.FC = () => {
             </div>
             <div className="flex flex-col items-center text-center">
               <h2 className="text-xl font-extrabold text-white leading-tight">
-                {settings.nomeSistema || 'Multiplicador 360'}
+                {settings.nomeSistema ? settings.nomeSistema.split(' - ')[0] : 'Multiplicador 360'}
               </h2>
               <span className="text-[11px] text-blue-400 font-bold uppercase tracking-widest leading-none mt-1">
                 Sistema de Gestão
