@@ -13,7 +13,7 @@ import { SystemSettingsPage } from './components/settings/SystemSettingsPage';
 import { Menu, ShieldAlert } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { currentUser, activeTab, setActiveTab } = useApp();
+  const { currentUser, activeTab, setActiveTab, settings } = useApp();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   if (!currentUser) {
@@ -106,7 +106,7 @@ const MainLayout: React.FC = () => {
 
         {/* System Footer */}
         <footer className="h-10 bg-slate-100 border-t border-slate-200 px-4 sm:px-8 flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-widest shrink-0">
-          <div className="truncate">© {new Date().getFullYear()} Voz & Voto — Sistema de Gestão Estratégica</div>
+          <div className="truncate">© {new Date().getFullYear()} {settings.nomeSistema || 'Multiplicador 360'} — Sistema de Gestão Estratégica</div>
           <div className="hidden sm:flex items-center gap-4">
             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Status: Online</span>
             <span>Segurança: SSL Criptografado</span>

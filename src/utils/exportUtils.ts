@@ -113,6 +113,17 @@ export function printOrExportPDF(titulo: string, subtitulo: string, cabecalhos: 
         @media print {
           body { padding: 0; }
           button { display: none; }
+          /* Oculta qualquer elemento injetado que não seja cabeçalho, tabela ou rodapé */
+          body > :not(.header):not(table):not(.footer) {
+            display: none !important;
+          }
+        }
+        /* Oculta elementos conhecidos de extensões (ex: Ubersuggest) */
+        [id*="ubersuggest"], [class*="ubersuggest"],
+        [id*="neilpatel"], [class*="neilpatel"],
+        .ubersuggest-installed,
+        iframe {
+          display: none !important;
         }
       </style>
     </head>

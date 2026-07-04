@@ -3,39 +3,36 @@ import { useApp } from '../../context/AppContext';
 import { Eleitor } from '../../types';
 import { EleitorFormModal } from './EleitorFormModal';
 import { EleitorDetailModal } from './EleitorDetailModal';
+import { ConfirmModal } from '../common/ConfirmModal';
 import { exportEleitoresToExcel, exportEleitoresToCSV, printOrExportPDF } from '../../utils/exportUtils';
 import { 
   Search, 
   Filter, 
   UserPlus, 
-  Download, 
   FileSpreadsheet, 
   FileText, 
   Printer, 
   Eye, 
   Edit3, 
   Trash2, 
-  CheckCircle2, 
-  Award, 
   Users, 
-  MapPin, 
   Phone, 
-  Vote, 
-  AlertTriangle,
-  ChevronLeft,
+  ChevronLeft, 
   ChevronRight
 } from 'lucide-react';
 
 export const EleitoresList: React.FC = () => {
-  const { currentUser, getFilteredEleitores, deleteEleitor } = useApp();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { currentUser, getFilteredEleitores, deleteEleitor, searchTerm, setSearchTerm } = useApp();
   const [filtroEspecial, setFiltroEspecial] = useState<'TODOS' | 'APOIADORES' | 'LIDERES' | 'INFLUENCIADORES' | 'WHATSAPP'>('TODOS');
   const [filtroCidade, setFiltroCidade] = useState<string>('TODAS');
+  const [filtroBairro, setFiltroBairro] = useState<string>('TODOS');
+  const [filtroEstado, setFiltroEstado] = useState<string>('TODOS');
 
   // Modals state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [eleitorEditing, setEleitorEditing] = useState<Eleitor | null>(null);
   const [eleitorViewing, setEleitorViewing] = useState<Eleitor | null>(null);
+  const [eleitorToDelete, setEleitorToDelete] = useState<Eleitor | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,13 +43,54 @@ export const EleitoresList: React.FC = () => {
   const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
   const eleitoresAutorizados = getFilteredEleitores();
 
-  // Lista única de cidades para filtro
+  // Lista única de cidades para filtro com contagem
   const cidadesDisponiveis = useMemo(() => {
-    const set = new Set<string>();
+    const counts: Record<string, number> = {};
     eleitoresAutorizados.forEach((e) => {
-      if (e.cidade) set.add(e.cidade);
+      if (e.cidade) {
+        counts[e.cidade] = (counts[e.cidade] || 0) + 1;
+      }
     });
-    return Array.from(set).sort();
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [eleitoresAutorizados]);
+
+  // Lista única de bairros para filtro com contagem
+  const bairrosDisponiveis = useMemo(() => {
+    const counts: Record<string, number> = {};
+    eleitoresAutorizados.forEach((e) => {
+      if (e.bairro) {
+        counts[e.bairro] = (counts[e.bairro] || 0) + 1;
+      }
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [eleitoresAutorizados]);
+
+  // Lista única de estados para filtro com contagem
+  const estadosDisponiveis = useMemo(() => {
+    const counts: Record<string, number> = {};
+    eleitoresAutorizados.forEach((e) => {
+      if (e.estado) {
+        counts[e.estado] = (counts[e.estado] || 0) + 1;
+      }
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [eleitoresAutorizados]);
+
+  // Contagens por categoria para pílulas de filtro rápido
+  const contagens = useMemo(() => {
+    return {
+      TODOS: eleitoresAutorizados.length,
+      APOIADORES: eleitoresAutorizados.filter((e) => e.apoiaCandidato).length,
+      LIDERES: eleitoresAutorizados.filter((e) => e.liderComunitario).length,
+      INFLUENCIADORES: eleitoresAutorizados.filter((e) => e.influenciador).length,
+      WHATSAPP: eleitoresAutorizados.filter((e) => e.possuiGrupoWhatsapp).length,
+    };
   }, [eleitoresAutorizados]);
 
   // Filtragem instantânea
@@ -82,6 +120,16 @@ export const EleitoresList: React.FC = () => {
         return false;
       }
 
+      // Filtro por Bairro
+      if (filtroBairro !== 'TODOS' && e.bairro !== filtroBairro) {
+        return false;
+      }
+
+      // Filtro por Estado
+      if (filtroEstado !== 'TODOS' && e.estado !== filtroEstado) {
+        return false;
+      }
+
       // 3. Filtros Especiais
       if (filtroEspecial === 'APOIADORES' && !e.apoiaCandidato) return false;
       if (filtroEspecial === 'LIDERES' && !e.liderComunitario) return false;
@@ -90,7 +138,7 @@ export const EleitoresList: React.FC = () => {
 
       return true;
     });
-  }, [eleitoresAutorizados, searchTerm, filtroCidade, filtroEspecial]);
+  }, [eleitoresAutorizados, searchTerm, filtroCidade, filtroBairro, filtroEstado, filtroEspecial]);
 
   // Paginação
   const totalPages = Math.ceil(eleitoresFiltrados.length / itemsPerPage) || 1;
@@ -105,9 +153,7 @@ export const EleitoresList: React.FC = () => {
       alert('Acesso negado: Você só pode excluir cadastros realizados por você.');
       return;
     }
-    if (window.confirm(`Tem certeza que deseja excluir o cadastro do eleitor "${e.nomeCompleto}"? Esta ação não pode ser desfeita e será registrada na auditoria LGPD.`)) {
-      deleteEleitor(e.id);
-    }
+    setEleitorToDelete(e);
   };
 
   const handleEdit = (e: Eleitor) => {
@@ -141,7 +187,7 @@ export const EleitoresList: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2.5">
             <Users className="w-6 h-6 text-blue-600" />
-            Base Geral de Eleitores
+            <span>Base Geral de Eleitores</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isSuperAdmin
@@ -191,10 +237,10 @@ export const EleitoresList: React.FC = () => {
 
       {/* Barras de Busca e Filtros Rápidos */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div className="space-y-3">
           
           {/* Busca instantânea */}
-          <div className="md:col-span-8 relative">
+          <div className="relative">
             <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
             <input
               type="text"
@@ -208,53 +254,106 @@ export const EleitoresList: React.FC = () => {
             />
           </div>
 
-          {/* Filtro por Cidade */}
-          <div className="md:col-span-4">
-            <select
-              value={filtroCidade}
-              onChange={(e) => {
-                setFiltroCidade(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-hidden focus:border-blue-600 font-medium"
-            >
-              <option value="TODAS">📍 Todas as Cidades</option>
-              {cidadesDisponiveis.map((cid) => (
-                <option key={cid} value={cid}>
-                  Cidade: {cid}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Filtro por Estado */}
+            <div>
+              <select
+                value={filtroEstado}
+                onChange={(e) => {
+                  setFiltroEstado(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-hidden focus:border-blue-600 font-medium"
+              >
+                <option value="TODOS">🌎 Todos os Estados ({eleitoresAutorizados.length})</option>
+                {estadosDisponiveis.map((est) => (
+                  <option key={est.name} value={est.name}>
+                    {est.name} ({est.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por Cidade */}
+            <div>
+              <select
+                value={filtroCidade}
+                onChange={(e) => {
+                  setFiltroCidade(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-hidden focus:border-blue-600 font-medium"
+              >
+                <option value="TODAS">📍 Todas as Cidades ({eleitoresAutorizados.length})</option>
+                {cidadesDisponiveis.map((cid) => (
+                  <option key={cid.name} value={cid.name}>
+                    {cid.name} ({cid.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por Bairro */}
+            <div>
+              <select
+                value={filtroBairro}
+                onChange={(e) => {
+                  setFiltroBairro(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs sm:text-sm text-slate-800 focus:outline-hidden focus:border-blue-600 font-medium"
+              >
+                <option value="TODOS">🏡 Todos os Bairros ({eleitoresAutorizados.length})</option>
+                {bairrosDisponiveis.map((bai) => (
+                  <option key={bai.name} value={bai.name}>
+                    {bai.name} ({bai.count})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Pílulas de Filtro Rápido */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5" /> Filtros Rápidos:
-          </span>
-          {[
-            { id: 'TODOS', label: 'Todos os Registros' },
-            { id: 'APOIADORES', label: '✅ Apoiadores Confirmados' },
-            { id: 'LIDERES', label: '👑 Líderes Comunitários' },
-            { id: 'INFLUENCIADORES', label: '📢 Influenciadores' },
-            { id: 'WHATSAPP', label: '📱 Admins de Grupo WhatsApp' },
-          ].map((pill) => (
-            <button
-              key={pill.id}
-              onClick={() => {
-                setFiltroEspecial(pill.id as any);
-                setCurrentPage(1);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                filtroEspecial === pill.id
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {pill.label}
-            </button>
-          ))}
+        {/* Pílulas de Filtro Rápido e Contador Geral do Filtro */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5" /> Filtros Rápidos:
+            </span>
+            {[
+              { id: 'TODOS', label: 'Todos os Registros', count: contagens.TODOS },
+              { id: 'APOIADORES', label: '✅ Apoiadores Confirmados', count: contagens.APOIADORES },
+              { id: 'LIDERES', label: '👑 Líderes Comunitários', count: contagens.LIDERES },
+              { id: 'INFLUENCIADORES', label: '📢 Influenciadores', count: contagens.INFLUENCIADORES },
+              { id: 'WHATSAPP', label: '📱 Admins de Grupo WhatsApp', count: contagens.WHATSAPP },
+            ].map((pill) => (
+              <button
+                key={pill.id}
+                onClick={() => {
+                  setFiltroEspecial(pill.id as any);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filtroEspecial === pill.id
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>{pill.label}</span>
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-extrabold ${
+                  filtroEspecial === pill.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {pill.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="shrink-0 flex justify-end">
+            <span className="px-3.5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5">
+              Total Encontrado: <span className="text-blue-400 font-extrabold text-sm">{eleitoresFiltrados.length}</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -421,6 +520,20 @@ export const EleitoresList: React.FC = () => {
         eleitor={eleitorViewing}
       />
 
+      <ConfirmModal
+        isOpen={!!eleitorToDelete}
+        title="Excluir Eleitor"
+        message={`Tem certeza que deseja excluir o cadastro do eleitor "${eleitorToDelete?.nomeCompleto}"? Esta ação não pode ser desfeita e será registrada na auditoria LGPD.`}
+        confirmText="Excluir"
+        isDanger={true}
+        onConfirm={() => {
+          if (eleitorToDelete) {
+            deleteEleitor(eleitorToDelete.id);
+          }
+          setEleitorToDelete(null);
+        }}
+        onCancel={() => setEleitorToDelete(null)}
+      />
     </div>
   );
 };

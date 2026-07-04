@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { User } from '../../types';
 import { MultiplicadorFormModal } from './MultiplicadorFormModal';
 import { MultiplicadorEleitoresModal } from './MultiplicadorEleitoresModal';
+import { ConfirmModal } from '../common/ConfirmModal';
 import { printOrExportPDF } from '../../utils/exportUtils';
 import { 
   Users, 
@@ -27,7 +28,11 @@ export const MultiplicadoresList: React.FC = () => {
   const { users, eleitores, deleteUser, toggleUserStatus, resetUserPassword } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userEditing, setUserEditing] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [viewingEleitoresFor, setViewingEleitoresFor] = useState<User | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('123456');
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
 
   const multiplicadores = users.filter((u) => u.role === 'MULTIPLICADOR');
 
@@ -37,17 +42,13 @@ export const MultiplicadoresList: React.FC = () => {
       alert(`Atenção: O multiplicador "${u.nome}" possui ${contagem} eleitores cadastrados. Recomendamos inativar o multiplicador em vez de excluir.`);
       return;
     }
-    if (window.confirm(`Confirma a exclusão do multiplicador "${u.nome}"?`)) {
-      deleteUser(u.id);
-    }
+    setUserToDelete(u);
   };
 
   const handleResetPassword = (u: User) => {
-    const nova = prompt(`Digite a nova senha para ${u.nome} (Login: ${u.login}):`, '123456');
-    if (nova && nova.trim()) {
-      resetUserPassword(u.id, nova.trim());
-      alert(`Senha redefinida com sucesso para: ${nova.trim()}`);
-    }
+    setResetPasswordUser(u);
+    setNewPassword('123456');
+    setResetSuccessMessage(null);
   };
 
   const handlePrintReport = () => {
@@ -126,7 +127,7 @@ export const MultiplicadoresList: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-bold text-sm text-slate-900 truncate">{m.nome}</h3>
-                      <p className="text-xs text-slate-500 font-mono">Login: @{m.login}</p>
+                      <p className="text-xs text-slate-500 font-mono">Login: {m.login}</p>
                     </div>
                   </div>
 
@@ -201,13 +202,6 @@ export const MultiplicadoresList: React.FC = () => {
 
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => setViewingEleitoresFor(m)}
-                    className="p-1.5 rounded-xl bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-colors cursor-pointer"
-                    title="Ver lista de eleitores cadastrados"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
                     onClick={() => handleResetPassword(m)}
                     className="p-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors cursor-pointer"
                     title="Redefinir Senha de Acesso"
@@ -253,6 +247,85 @@ export const MultiplicadoresList: React.FC = () => {
         onClose={() => setViewingEleitoresFor(null)}
         multiplicador={viewingEleitoresFor}
       />
+
+      <ConfirmModal
+        isOpen={!!userToDelete}
+        title="Excluir Multiplicador"
+        message={`Confirma a exclusão do multiplicador "${userToDelete?.nome}"?`}
+        confirmText="Excluir"
+        isDanger={true}
+        onConfirm={() => {
+          if (userToDelete) {
+            deleteUser(userToDelete.id);
+          }
+          setUserToDelete(null);
+        }}
+        onCancel={() => setUserToDelete(null)}
+      />
+
+      {/* Modal Personalizado para Redefinir Senha */}
+      {resetPasswordUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setResetPasswordUser(null)} />
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 relative z-10 animate-in fade-in zoom-in-95 duration-200 text-xs">
+            <div className="flex items-center gap-2.5 mb-4 pb-2 border-b border-slate-100">
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-900">Redefinir Senha</h3>
+                <p className="text-[10px] text-slate-500">Defina uma nova senha para {resetPasswordUser.nome}</p>
+              </div>
+            </div>
+
+            {resetSuccessMessage ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-bold mb-2 text-center">
+                {resetSuccessMessage}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nova Senha de Acesso</label>
+                  <input
+                    type="text"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Digite a nova senha"
+                    className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-mono focus:border-indigo-600 focus:outline-hidden"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setResetPasswordUser(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (newPassword.trim()) {
+                        await resetUserPassword(resetPasswordUser.id, newPassword.trim());
+                        setResetSuccessMessage(`Senha redefinida com sucesso!`);
+                        setTimeout(() => {
+                          setResetPasswordUser(null);
+                          setResetSuccessMessage(null);
+                        }, 2000);
+                      }
+                    }}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+                  >
+                    Salvar Senha
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

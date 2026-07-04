@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Bell, 
@@ -15,10 +15,24 @@ import {
 import { NotificationDrawer } from './NotificationDrawer';
 
 export const Navbar: React.FC = () => {
-  const { currentUser, users, switchProfile, logout, notifications, settings, setActiveTab } = useApp();
+  const { currentUser, users, switchProfile, logout, notifications, settings, setActiveTab, searchTerm, setSearchTerm } = useApp();
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
   const [showNotifDrawer, setShowNotifDrawer] = useState(false);
-  const [globalSearch, setGlobalSearch] = useState('');
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+        setShowProfileSwitcher(false);
+      }
+    };
+    if (showProfileSwitcher) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [showProfileSwitcher]);
 
   if (!currentUser) return null;
 
@@ -26,9 +40,7 @@ export const Navbar: React.FC = () => {
 
   const handleGlobalSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (globalSearch.trim()) {
-      setActiveTab('eleitores');
-    }
+    setActiveTab('eleitores');
   };
 
   return (
@@ -40,8 +52,11 @@ export const Navbar: React.FC = () => {
           <form onSubmit={handleGlobalSearchSubmit} className="relative w-full">
             <input
               type="text"
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setActiveTab('eleitores');
+              }}
               placeholder="Pesquisar eleitores por CPF, Nome ou Título..."
               className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-800 placeholder:text-slate-400"
             />
@@ -63,64 +78,66 @@ export const Navbar: React.FC = () => {
           </button>
 
           {/* Seletor Demonstrativo de Acesso */}
-          <div className="relative">
-            <button
-              onClick={() => setShowProfileSwitcher(!showProfileSwitcher)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 transition-all shadow-xs cursor-pointer"
-              title="Trocar rapidamente entre Super Admin e Multiplicadores"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden md:inline">Visão:</span>
-              <span className={`font-bold ${currentUser.role === 'SUPER_ADMIN' ? 'text-indigo-600' : 'text-slate-800'}`}>
-                {currentUser.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Multiplicador'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
+          {currentUser.role === 'SUPER_ADMIN' && (
+            <div className="relative" ref={switcherRef}>
+              <button
+                onClick={() => setShowProfileSwitcher(!showProfileSwitcher)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 transition-all shadow-xs cursor-pointer"
+                title="Trocar rapidamente entre Super Admin e Multiplicadores"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden md:inline">Visão:</span>
+                <span className="font-bold text-indigo-600">
+                  Super Admin
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
 
-            {showProfileSwitcher && (
-              <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-3 py-1.5 border-b border-slate-100">
-                  <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> Alternar Perfil de Teste
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                    Alterne o cargo em tempo real para verificar as permissões e o isolamento de dados.
-                  </p>
-                </div>
-                <div className="max-h-60 overflow-y-auto py-1">
-                  {users.map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => {
-                        switchProfile(u);
-                        setShowProfileSwitcher(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors cursor-pointer ${
-                        currentUser.id === u.id ? 'bg-indigo-50 border-l-2 border-indigo-600 font-semibold text-indigo-900' : 'text-slate-700'
-                      }`}
-                    >
-                      <div className="truncate pr-2">
-                        <div className="font-medium flex items-center gap-1.5">
-                          {u.role === 'SUPER_ADMIN' ? (
-                            <Award className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                          ) : (
-                            <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          )}
-                          <span className="truncate">{u.nome}</span>
+              {showProfileSwitcher && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-1.5 border-b border-slate-100">
+                    <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Alternar Perfil de Teste
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                      Alterne o cargo em tempo real para verificar as permissões e o isolamento de dados.
+                    </p>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto py-1">
+                    {users.map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => {
+                          switchProfile(u);
+                          setShowProfileSwitcher(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors cursor-pointer ${
+                          currentUser.id === u.id ? 'bg-indigo-50 border-l-2 border-indigo-600 font-semibold text-indigo-900' : 'text-slate-700'
+                        }`}
+                      >
+                        <div className="truncate pr-2">
+                          <div className="font-medium flex items-center gap-1.5">
+                            {u.role === 'SUPER_ADMIN' ? (
+                              <Award className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            ) : (
+                              <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            )}
+                            <span className="truncate">{u.nome}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 pl-5">
+                            {u.cidade} • {u.situacao}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-400 pl-5">
-                          {u.cidade} • {u.situacao}
-                        </div>
-                      </div>
-                      {currentUser.id === u.id && (
-                        <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-sm font-bold">Ativo</span>
-                      )}
-                    </button>
-                  ))}
+                        {currentUser.id === u.id && (
+                          <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-sm font-bold">Ativo</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Sino de Notificações */}
           <button

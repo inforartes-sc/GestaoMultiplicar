@@ -19,6 +19,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
   const [cidade, setCidade] = useState('');
   const [situacao, setSituacao] = useState<'ATIVO' | 'INATIVO'>('ATIVO');
   const [metaMensal, setMetaMensal] = useState<number>(30);
+  const [role, setRole] = useState<'SUPER_ADMIN' | 'MULTIPLICADOR'>('MULTIPLICADOR');
 
   useEffect(() => {
     if (userToEdit) {
@@ -29,6 +30,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
       setCidade(userToEdit.cidade);
       setSituacao(userToEdit.situacao);
       setMetaMensal(userToEdit.metaMensal || 30);
+      setRole(userToEdit.role || 'MULTIPLICADOR');
     } else {
       setNome('');
       setLoginStr('');
@@ -37,6 +39,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
       setCidade('São Paulo');
       setSituacao('ATIVO');
       setMetaMensal(30);
+      setRole('MULTIPLICADOR');
     }
   }, [userToEdit, isOpen]);
 
@@ -56,6 +59,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
         telefone,
         cidade,
         situacao,
+        role,
         metaMensal: Number(metaMensal) || 25,
       });
     } else {
@@ -66,7 +70,7 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
         telefone,
         cidade,
         situacao,
-        role: 'MULTIPLICADOR',
+        role,
         metaMensal: Number(metaMensal) || 25,
       });
     }
@@ -159,6 +163,18 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
 
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <label className="block font-bold text-slate-700 mb-1">Nível de Permissão *</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as any)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white font-bold"
+              >
+                <option value="MULTIPLICADOR">👤 Multiplicador (Acesso Limitado)</option>
+                <option value="SUPER_ADMIN">👑 Administrador (Acesso Total)</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block font-bold text-slate-700 mb-1">Situação no Sistema</label>
               <select
                 value={situacao}
@@ -169,17 +185,17 @@ export const MultiplicadorFormModal: React.FC<MultiplicadorFormModalProps> = ({ 
                 <option value="INATIVO">🚫 INATIVO (Bloqueado)</option>
               </select>
             </div>
+          </div>
 
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Meta de Cadastros / Mês</label>
-              <input
-                type="number"
-                min="1"
-                value={metaMensal}
-                onChange={(e) => setMetaMensal(Number(e.target.value))}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-blue-600"
-              />
-            </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Meta de Cadastros / Mês</label>
+            <input
+              type="number"
+              min="1"
+              value={metaMensal}
+              onChange={(e) => setMetaMensal(Number(e.target.value))}
+              className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-blue-600"
+            />
           </div>
 
           <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 flex items-start gap-2.5 mt-2">

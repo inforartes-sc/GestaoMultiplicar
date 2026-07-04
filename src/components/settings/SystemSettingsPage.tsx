@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Settings, Save, ShieldCheck, Palette, Target, Database, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, ShieldCheck, Palette, Target, Database, CheckCircle2, Lock, KeyRound } from 'lucide-react';
 
 export const SystemSettingsPage: React.FC = () => {
-  const { settings, updateSettings } = useApp();
+  const { settings, updateSettings, currentUser, resetUserPassword } = useApp();
 
   const [nomeSistema, setNomeSistema] = useState(settings.nomeSistema);
   const [candidatoApoiado, setCandidatoApoiado] = useState(settings.candidatoApoiado);
@@ -14,10 +14,37 @@ export const SystemSettingsPage: React.FC = () => {
   const [retencaoDadosMeses, setRetencaoDadosMeses] = useState(settings.retencaoDadosMeses);
   const [salvo, setSalvo] = useState(false);
 
+  // Alteração de Senha do Admin
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [senhaErro, setSenhaErro] = useState<string | null>(null);
+  const [senhaSalva, setSenhaSalva] = useState(false);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSenhaErro(null);
+    setSenhaSalva(false);
+    if (!novaSenha.trim()) {
+      setSenhaErro('A senha não pode estar em branco.');
+      return;
+    }
+    if (novaSenha !== confirmarSenha) {
+      setSenhaErro('As senhas não coincidem.');
+      return;
+    }
+    if (currentUser) {
+      await resetUserPassword(currentUser.id, novaSenha.trim());
+      setSenhaSalva(true);
+      setNovaSenha('');
+      setConfirmarSenha('');
+      setTimeout(() => setSenhaSalva(false), 3000);
+    }
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettings({
-      nomeSistema,
+      nomeSistema: nomeSistema.trim(),
       candidatoApoiado,
       corPrincipal,
       corSecundaria,
@@ -46,9 +73,9 @@ export const SystemSettingsPage: React.FC = () => {
       </div>
 
       {salvo && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-          Configurações atualizadas e aplicadas em tempo real a todo o sistema!
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2.5 shadow-xl animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          Configurações salvas e aplicadas em tempo real com sucesso!
         </div>
       )}
 
@@ -63,13 +90,12 @@ export const SystemSettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Nome do Sistema *</label>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Nome do Sistema</label>
               <input
                 type="text"
-                required
                 value={nomeSistema}
                 onChange={(e) => setNomeSistema(e.target.value)}
-                className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:border-blue-600 focus:outline-hidden"
+                className="w-full bg-white text-slate-900 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -169,13 +195,13 @@ export const SystemSettingsPage: React.FC = () => {
         {/* Rodapé do Sistema */}
         <div>
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-            <Database className="w-4 h-4 text-slate-600" /> 4. Texto de Rodapé do Sistema
+            <Database className="w-4 h-4 text-slate-500" /> 4. Texto de Rodapé do Sistema (Exclusivo do Sistema)
           </h3>
           <input
             type="text"
+            readOnly
             value={textoRodape}
-            onChange={(e) => setTextoRodape(e.target.value)}
-            className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-700"
+            className="w-full bg-slate-50 text-slate-500 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs cursor-not-allowed select-none"
           />
         </div>
 
@@ -188,6 +214,62 @@ export const SystemSettingsPage: React.FC = () => {
           </button>
         </div>
 
+      </form>
+
+      {/* Alterar Senha do Super Admin */}
+      <form onSubmit={handleUpdatePassword} className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-6">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+            <Lock className="w-4 h-4 text-red-600" /> 5. Alterar Senha do Administrador
+          </h3>
+
+          {senhaErro && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+              {senhaErro}
+            </div>
+          )}
+
+          {senhaSalva && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+              Senha do administrador redefinida com sucesso!
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Nova Senha</label>
+              <input
+                type="password"
+                required
+                value={novaSenha}
+                onChange={(e) => setNovaSenha(e.target.value)}
+                placeholder="Digite a nova senha"
+                className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Confirmar Nova Senha</label>
+              <input
+                type="password"
+                required
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                placeholder="Confirme a nova senha"
+                className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-hidden"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-slate-200 flex justify-end">
+          <button
+            type="submit"
+            className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs shadow-md shadow-red-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <KeyRound className="w-4 h-4" /> Alterar Senha
+          </button>
+        </div>
       </form>
     </div>
   );

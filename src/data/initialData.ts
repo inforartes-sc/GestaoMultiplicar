@@ -1,7 +1,7 @@
 import { User, Eleitor, AuditLog, NotificationItem, SystemSettings } from '../types';
 
 export const INITIAL_SETTINGS: SystemSettings = {
-  nomeSistema: 'EleitoPro • Gestão 360º',
+  nomeSistema: 'Multiplicador 360',
   candidatoApoiado: 'Deputado Carlos Silva (45123)',
   corPrincipal: '#2563eb',
   corSecundaria: '#1e40af',
@@ -75,6 +75,9 @@ export const INITIAL_USERS: User[] = [
 ];
 
 const hoje = new Date().toISOString().split('T')[0];
+const ontem = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+const anteontem = new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0];
+const tresDiasAtras = new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0];
 
 export const INITIAL_ELEITORES: Eleitor[] = [
   {
@@ -516,7 +519,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     tipo: 'NOVO_CADASTRO',
     titulo: 'Novos Cadastros Realizados Hoje!',
     mensagem: 'Marcos Silva e Ana Paula Souza registraram novos eleitores nas últimas horas.',
-    dataHora: `${hoje}T10:50:00Z`,
+    dataHora: `${hoje}T07:50:00Z`,
     lido: false,
   },
   {
@@ -524,7 +527,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     tipo: 'MULTIPLICADOR_INATIVO',
     titulo: 'Alerta de Inatividade',
     mensagem: 'A multiplicadora Juliana Costa (Osasco) está inativa e sem cadastros há mais de 15 dias.',
-    dataHora: '2026-06-30T10:00:00Z',
+    dataHora: `${ontem}T07:00:00Z`,
     lido: false,
     multiplicadorId: 'usr-mult-04',
   },
@@ -533,7 +536,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     tipo: 'SISTEMA',
     titulo: 'Auditoria LGPD Concluída',
     mensagem: '100% dos registros ativos possuem termo de consentimento e IP de origem validados.',
-    dataHora: '2026-06-29T14:00:00Z',
+    dataHora: `${anteontem}T11:00:00Z`,
     lido: true,
   },
   {
@@ -541,7 +544,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     tipo: 'META_ATINGIDA',
     titulo: 'Destaque da Semana',
     mensagem: 'Marcos Silva atingiu 100% da sua meta mensal na Zona Sul!',
-    dataHora: '2026-06-28T19:30:00Z',
+    dataHora: `${tresDiasAtras}T16:30:00Z`,
     lido: true,
   }
 ];

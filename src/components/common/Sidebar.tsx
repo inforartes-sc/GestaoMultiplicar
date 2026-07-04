@@ -87,10 +87,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
       >
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3 font-bold text-xl tracking-tight text-indigo-400 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">
-              V&V
+            <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white text-[13px] font-black shadow-sm shrink-0">
+              360
             </div>
-            <span className="truncate">{settings.nomeSistema || 'VOZ & VOTO'}</span>
+            <div className="flex flex-col min-w-0">
+              {settings.nomeSistema && settings.nomeSistema.includes('•') ? (
+                <>
+                  <span className="text-base font-black text-white leading-tight truncate">
+                    {settings.nomeSistema.split('•')[0].trim()}
+                  </span>
+                  <span className="text-[11px] text-indigo-200 font-bold uppercase tracking-widest leading-none mt-1 truncate">
+                    {settings.nomeSistema.split('•')[1].trim()}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-base font-black text-white leading-tight truncate">
+                    {settings.nomeSistema || 'VOZ & VOTO'}
+                  </span>
+                  <span className="text-[11px] text-indigo-200 font-bold uppercase tracking-widest leading-none mt-1 truncate">
+                    Sistema de Gestão
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 

@@ -82,13 +82,25 @@ export const LoginPage: React.FC = () => {
 
         {/* Painel Direito: Formulário de Login */}
         <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md">
-          <div className="text-center mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-xl mx-auto shadow-lg shadow-blue-600/30 mb-3">
-              EP
+          <div className="flex items-center gap-3 justify-center mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-600/30 shrink-0">
+              360
             </div>
-            <h2 className="text-xl font-bold text-white">Acesso ao Sistema</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Digite suas credenciais ou utilize as contas demonstrativas abaixo.
+            <div className="flex flex-col items-center text-center">
+              <h2 className="text-xl font-extrabold text-white leading-tight">
+                {settings.nomeSistema || 'Multiplicador 360'}
+              </h2>
+              <span className="text-[11px] text-blue-400 font-bold uppercase tracking-widest leading-none mt-1">
+                Sistema de Gestão
+              </span>
+            </div>
+          </div>
+
+          {/* Subtítulo de Instrução e Acesso */}
+          <div className="text-center mb-6 border-t border-slate-800/80 pt-5">
+            <h3 className="text-sm font-bold text-slate-200">Acesso ao Sistema</h3>
+            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              Digite suas credenciais para acessar sua área de trabalho.
             </p>
           </div>
 
@@ -142,44 +154,6 @@ export const LoginPage: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Atalhos Rápidos Demonstrativos */}
-          <div className="mt-6 pt-6 border-t border-slate-800">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-3">
-              🚀 Acesso Instantâneo de Avaliação
-            </p>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('admin', '123')}
-                className="w-full p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-400 shrink-0" />
-                  <div className="text-left">
-                    <div className="font-bold">Super Administrador</div>
-                    <div className="text-[10px] text-amber-300/70">Acesso total 360º • Carlos Eduardo</div>
-                  </div>
-                </div>
-                <span className="text-[10px] bg-amber-500/20 px-2 py-1 rounded-md">Entrar</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('marcos.silva', '123')}
-                className="w-full p-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-400 shrink-0" />
-                  <div className="text-left">
-                    <div className="font-bold">Multiplicador (Marcos Silva)</div>
-                    <div className="text-[10px] text-blue-300/70">Acesso isolado • Zona Sul SP</div>
-                  </div>
-                </div>
-                <span className="text-[10px] bg-blue-500/20 px-2 py-1 rounded-md">Entrar</span>
-              </button>
-            </div>
-          </div>
 
         </div>
 
